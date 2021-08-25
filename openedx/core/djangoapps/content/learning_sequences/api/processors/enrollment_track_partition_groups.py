@@ -1,5 +1,9 @@
 # lint-amnesty, pylint: disable=missing-module-docstring
 import logging
+from datetime import datetime
+
+from opaque_keys.edx.keys import CourseKey
+from openedx.core import types
 
 from xmodule.partitions.enrollment_track_partition_generator import (
     create_enrollment_track_partition_with_course_id
@@ -22,8 +26,8 @@ class EnrollmentTrackPartitionGroupsOutlineProcessor(OutlineProcessor):
     significant limitation. Nonetheless, it is a step towards the goal of
     supporting all partition schemes in the future.
     """
-    def __init__(self, course_key, user, at_time):
-        super().__init__(course_key, user, at_time)
+    def __init__(self, course_key: CourseKey, user: types.User, at_time: datetime, course_version: str):
+        super().__init__(course_key, user, at_time, course_version)
         self.enrollment_track_groups = {}
         self.user_group = None
 

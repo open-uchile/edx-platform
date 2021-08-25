@@ -354,7 +354,7 @@ def _get_user_course_outline_and_processors(course_key: CourseKey,  # lint-amnes
     for name, processor_cls in processor_classes:
         # Future optimization: This should be parallelizable (don't rely on a
         # particular ordering).
-        processor = processor_cls(course_key, user, at_time)
+        processor = processor_cls(course_key, user, at_time, full_course_outline.published_version)
         processors[name] = processor
         processor.load_data()
         if not user_can_see_all_content:

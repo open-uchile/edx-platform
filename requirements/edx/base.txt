@@ -507,7 +507,7 @@ edx-toggles==4.2.0
     #   ora2
 edx-user-state-client==1.3.2
     # via -r requirements/edx/base.in
-edx-when==2.1.0
+git+https://github.com/edx/edx-when.git@61798b44e4be13988951df98b2bc9648137cbc81#egg=edx-when==2.1.2
     # via
     #   -r requirements/edx/base.in
     #   edx-proctoring

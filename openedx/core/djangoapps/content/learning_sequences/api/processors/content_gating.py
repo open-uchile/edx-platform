@@ -22,8 +22,8 @@ class ContentGatingOutlineProcessor(OutlineProcessor):
     - Chapter gated content
     """
 
-    def __init__(self, course_key: CourseKey, user: types.User, at_time: datetime):
-        super().__init__(course_key, user, at_time)
+    def __init__(self, course_key: CourseKey, user: types.User, at_time: datetime, course_version: str):
+        super().__init__(course_key, user, at_time, course_version)
         self.required_content = None
         self.can_skip_entrance_exam = False
 

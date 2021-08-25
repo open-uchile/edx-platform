@@ -34,8 +34,8 @@ class ScheduleOutlineProcessor(OutlineProcessor):
     * Things that are made inaccessible after they're due.
     """
 
-    def __init__(self, course_key: CourseKey, user: types.User, at_time: datetime):
-        super().__init__(course_key, user, at_time)
+    def __init__(self, course_key: CourseKey, user: types.User, at_time: datetime, course_version: str):
+        super().__init__(course_key, user, at_time, course_version)
         self.dates = None
         self.keys_to_schedule_fields: Dict[str, Dict[str, datetime]] = defaultdict(dict)
         self._course_start = None
@@ -44,9 +44,10 @@ class ScheduleOutlineProcessor(OutlineProcessor):
 
     def load_data(self):
         """Pull dates information from edx-when."""
-        # (usage_key, 'due'): datetime.datetime(2019, 12, 11, 15, 0, tzinfo=<UTC>)
-        # TODO: Merge https://github.com/edx/edx-when/pull/48 and add `outline_only=True`
-        self.dates = get_dates_for_course(self.course_key, self.user)
+        # Return data format: (usage_key, 'due'): datetime.datetime(2019, 12, 11, 15, 0, tzinfo=<UTC>)
+        self.dates = get_dates_for_course(
+            self.course_key, self.user, subsection_and_higher_only=True, published_version=self.course_version
+        )
 
         for (usage_key, field_name), date in self.dates.items():
             self.keys_to_schedule_fields[usage_key][field_name] = date

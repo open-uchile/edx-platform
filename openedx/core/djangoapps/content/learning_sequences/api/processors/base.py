@@ -33,7 +33,7 @@ class OutlineProcessor:
     UserCourseOutlineDetailsData.
     """
 
-    def __init__(self, course_key: CourseKey, user: types.User, at_time: datetime):
+    def __init__(self, course_key: CourseKey, user: types.User, at_time: datetime, course_version: str):
         """
         Basic initialization.
 
@@ -43,6 +43,7 @@ class OutlineProcessor:
         self.course_key = course_key
         self.user = user
         self.at_time = at_time
+        self.course_version = course_version
 
     def load_data(self):
         """

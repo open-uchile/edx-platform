@@ -177,7 +177,11 @@ def extract_dates(sender, course_key, **kwargs):  # pylint: disable=unused-argum
 
     date_items = extract_dates_from_course(course)
 
+    version = None
+    if hasattr(course, 'course_version'):
+        version = course.course_version
+
     try:
-        set_dates_for_course(course_key, date_items)
+        set_dates_for_course(course_key, date_items, published_version=version)
     except Exception:  # pylint: disable=broad-except
         log.exception('Unable to set dates for %s on course publish', course_key)
