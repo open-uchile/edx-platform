@@ -4,15 +4,27 @@ Signal receivers for the "student" application.
 
 # pylint: disable=unused-argument
 
+import logging
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
+from edx_name_affirmation.signals import VERIFIED_NAME_APPROVED
 
 from lms.djangoapps.courseware.toggles import courseware_mfe_progress_milestones_are_active
 from common.djangoapps.student.helpers import EMAIL_EXISTS_MSG_FMT, USERNAME_EXISTS_MSG_FMT, AccountValidationError
-from common.djangoapps.student.models import CourseEnrollment, CourseEnrollmentCelebration, is_email_retired, is_username_retired  # lint-amnesty, pylint: disable=line-too-long
+from common.djangoapps.student.models import (
+    CourseEnrollment,
+    CourseEnrollmentCelebration,
+    PendingNameChange,
+    is_email_retired,
+    is_username_retired
+)
+from common.djangoapps.student.views import confirm_name_change
+
+log = logging.getLogger(__name__)
 
 
 @receiver(pre_save, sender=get_user_model())
@@ -69,4 +81,16 @@ def create_course_enrollment_celebration(sender, instance, created, **kwargs):
         )
     except IntegrityError:
         # A celebration object was already created. Shouldn't happen, but ignore it if it does.
+        pass
+
+
+@receiver(VERIFIED_NAME_APPROVED)
+def listen_for_verified_name_approved(sender, user, profile_name, **kwargs):
+    """
+    If the user has a pending name change that corresponds to an approved verified name, confirm it.
+    """
+    try:
+        pending_name_change = PendingNameChange.objects.get(user=user, new_name=profile_name)
+        confirm_name_change(user, pending_name_change)
+    except PendingNameChange.DoesNotExist:
         pass

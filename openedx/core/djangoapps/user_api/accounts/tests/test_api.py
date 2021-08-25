@@ -16,6 +16,8 @@ from django.http import HttpResponse
 from django.test import TestCase
 from django.test.client import RequestFactory
 from django.urls import reverse
+from edx_name_affirmation.toggles import VERIFIED_NAME_FLAG
+from edx_toggles.toggles.testutils import override_waffle_flag
 from social_django.models import UserSocialAuth
 from common.djangoapps.student.models import (
     AccountRecovery,
@@ -31,6 +33,7 @@ from openedx.core.djangoapps.ace_common.tests.mixins import EmailTemplateTagMixi
 from openedx.core.djangoapps.user_api.accounts import PRIVATE_VISIBILITY
 from openedx.core.djangoapps.user_api.accounts.api import (
     get_account_settings,
+    request_name_change,
     update_account_settings
 )
 from openedx.core.djangoapps.user_api.accounts.tests.retirement_helpers import (  # pylint: disable=unused-import
@@ -361,6 +364,42 @@ class TestAccountApi(UserSettingsEventTestMixin, EmailTemplateTagMixin, CreateAc
         assert 'Valid e-mail address required.' in field_errors['email']['developer_message']
         assert 'Full Name cannot contain the following characters: < >' in field_errors['name']['user_message']
 
+    @override_waffle_flag(VERIFIED_NAME_FLAG, active=True)
+    @patch(
+        'openedx.core.djangoapps.user_api.accounts.api.get_certificates_for_user',
+        Mock(return_value=['mock certificate'])
+    )
+    def test_name_update_requires_idv(self):
+        """
+        Test that a name change is blocked through this API if it requires ID verification.
+        In this case, the user has at least one certificate.
+        """
+        update = {'name': 'New Name'}
+
+        with pytest.raises(AccountValidationError) as context_manager:
+            update_account_settings(self.user, update)
+
+        field_errors = context_manager.value.field_errors
+        assert len(field_errors) == 1
+        assert field_errors['name']['developer_message'] == 'This name change requires ID verification.'
+
+        account_settings = get_account_settings(self.default_request)[0]
+        assert account_settings['name'] != 'New Name'
+
+    @override_waffle_flag(VERIFIED_NAME_FLAG, active=True)
+    @patch(
+        'openedx.core.djangoapps.user_api.accounts.api.get_certificates_for_user',
+        Mock(return_value=[])
+    )
+    def test_name_update_does_not_require_idv(self):
+        """
+        Test that the user can change their name freely if it does not require verification.
+        """
+        update = {'name': 'New Name'}
+        update_account_settings(self.user, update)
+        account_settings = get_account_settings(self.default_request)[0]
+        assert account_settings['name'] == 'New Name'
+
     @patch('django.core.mail.EmailMultiAlternatives.send')
     @patch('common.djangoapps.student.views.management.render_to_string', Mock(side_effect=mock_render_to_string, autospec=True))  # lint-amnesty, pylint: disable=line-too-long
     def test_update_sending_email_fails(self, send_mail):
@@ -494,6 +533,29 @@ class TestAccountApi(UserSettingsEventTestMixin, EmailTemplateTagMixin, CreateAc
         assert account_settings['country'] is None
         assert account_settings['state'] is None
 
+    def test_pending_name_change(self):
+        """
+        Test to create and return a new pending name change.
+        """
+        new_name = 'New Name'
+        request_name_change(self.user, new_name)
+
+        account_settings = get_account_settings(self.default_request)[0]
+        assert account_settings['pending_name_change'] == new_name
+
+    def test_pending_name_change_same_name(self):
+        """
+        Test that attempting the request a name change with the same name as the user's
+        current profile name will not create a pending name change.
+        """
+        account_settings = get_account_settings(self.default_request)[0]
+        current_name = account_settings['name']
+
+        request_name_change(self.user, current_name)
+
+        account_settings = get_account_settings(self.default_request)[0]
+        assert account_settings['pending_name_change'] == None
+
 
 @patch('openedx.core.djangoapps.user_api.accounts.image_helpers._PROFILE_IMAGE_SIZES', [50, 10])
 @patch.dict(
@@ -555,6 +617,7 @@ class AccountSettingsOnCreationTest(CreateAccountMixin, TestCase):
             'time_zone': None,
             'course_certificates': None,
             'phone_number': None,
+            'pending_name_change': None,
             'is_verified_name_enabled': False,
         }
 

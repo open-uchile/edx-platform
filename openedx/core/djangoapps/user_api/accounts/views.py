@@ -21,6 +21,7 @@ from django.contrib.auth import authenticate, get_user_model, logout
 from django.contrib.sites.models import Site
 from django.core.cache import cache
 from django.db import transaction
+from django.forms import ValidationError as FormsValidationError
 from django.utils.translation import ugettext as _
 from edx_ace import ace
 from edx_ace.recipient import Recipient
@@ -76,7 +77,7 @@ from ..models import (
     UserRetirementPartnerReportingStatus,
     UserRetirementStatus
 )
-from .api import get_account_settings, update_account_settings
+from .api import get_account_settings, request_name_change, update_account_settings
 from .permissions import CanDeactivateUser, CanReplaceUsername, CanRetireUser
 from .serializers import (
     UserRetirementPartnerReportSerializer,
@@ -246,6 +247,9 @@ class AccountViewSet(ViewSet):
             * phone_number: The phone number for the user. String of numbers with
               an optional `+` sign at the start.
 
+            * pending_name_change: If the user has an active name change request, returns the
+              requested name.
+
             * is_verified_name_enabled: Temporary flag to control verified name field - see
               https://github.com/edx/edx-name-affirmation/blob/main/edx_name_affirmation/toggles.py
 
@@ -414,6 +418,50 @@ class AccountViewSet(ViewSet):
             )
 
         return Response(account_settings)
+
+
+class NameChangeView(APIView):
+    """
+    Request a profile name change. This creates a PendingNameChange to be verified later,
+    rather than updating the user's profile name directly.
+    """
+    authentication_classes = (JwtAuthentication, SessionAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request):
+        """
+        POST /api/user/v1/accounts/name_change/
+        
+        Example request:
+            {
+                "name": "Jon Doe"
+            }
+        """
+        try:
+            requested_name = request.data['name']
+        except KeyError as error:
+            return Response(f'{error} field is required', status=status.HTTP_400_BAD_REQUEST)
+
+        if requested_name == '':
+            return Response(
+                'An empty string was supplied. Please enter a valid name.',
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            pending_name_change = request_name_change(request.user, requested_name)
+            if pending_name_change:
+                return Response(status=status.HTTP_201_CREATED)
+            else:
+                return Response(
+                    'The name given was identical to the current name.',
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except FormsValidationError as err:
+            return Response(
+                f'Error thrown from validate_name: {err.message}',
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class AccountDeactivationView(APIView):

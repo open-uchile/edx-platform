@@ -15,7 +15,7 @@ from rest_framework import serializers
 
 from edx_name_affirmation.toggles import is_verified_name_enabled
 
-from common.djangoapps.student.models import UserPasswordToggleHistory
+from common.djangoapps.student.models import PendingNameChange, UserPasswordToggleHistory
 from lms.djangoapps.badges.utils import badges_enabled
 from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
 from openedx.core.djangoapps.user_api import errors
@@ -163,6 +163,7 @@ class UserReadOnlySerializer(serializers.Serializer):  # lint-amnesty, pylint: d
             "social_links": None,
             "extended_profile_fields": None,
             "phone_number": None,
+            "pending_name_change": None,
             "is_verified_name_enabled": is_verified_name_enabled(),
         }
 
@@ -195,6 +196,12 @@ class UserReadOnlySerializer(serializers.Serializer):  # lint-amnesty, pylint: d
                     "phone_number": user_profile.phone_number,
                 }
             )
+
+        try:
+            pending_name_change = PendingNameChange.objects.get(user=user)
+            data.update({"pending_name_change": pending_name_change.new_name})
+        except PendingNameChange.DoesNotExist:
+            pass
 
         if is_secondary_email_feature_enabled():
             data.update(

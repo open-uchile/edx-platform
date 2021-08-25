@@ -60,6 +60,15 @@ class UserAPITestCase(APITestCase):
         client.login(username=user.username, password=TEST_PASSWORD)
         return client
 
+    def send_post(self, client, json_data, content_type='application/json', expected_status=201):
+        """
+        Helper method for sending a post to the server, defaulting to application/json content_type.
+        Verifies the expected status and returns the response.
+        """
+        response = client.post(self.url, data=json.dumps(json_data), content_type=content_type)
+        assert expected_status == response.status_code
+        return response
+
     def send_patch(self, client, json_data, content_type="application/merge-patch+json", expected_status=200):
         """
         Helper method for sending a patch to the server, defaulting to application/merge-patch+json content_type.
@@ -276,7 +285,7 @@ class TestAccountsAPI(CacheIsolationTestCase, UserAPITestCase):
         Verify that all account fields are returned (even those that are not shareable).
         """
         data = response.data
-        assert 29 == len(data)
+        assert 30 == len(data)
 
         # public fields (3)
         expected_account_privacy = (
@@ -556,7 +565,7 @@ class TestAccountsAPI(CacheIsolationTestCase, UserAPITestCase):
             with self.assertNumQueries(queries):
                 response = self.send_get(self.client)
             data = response.data
-            assert 29 == len(data)
+            assert 30 == len(data)
             assert self.user.username == data['username']
             assert ((self.user.first_name + ' ') + self.user.last_name) == data['name']
             for empty_field in ("year_of_birth", "level_of_education", "mailing_address", "bio"):
@@ -955,7 +964,7 @@ class TestAccountsAPI(CacheIsolationTestCase, UserAPITestCase):
         response = self.send_get(client)
         if has_full_access:
             data = response.data
-            assert 29 == len(data)
+            assert 30 == len(data)
             assert self.user.username == data['username']
             assert ((self.user.first_name + ' ') + self.user.last_name) == data['name']
             assert self.user.email == data['email']
@@ -1012,6 +1021,52 @@ class TestAccountAPITransactions(TransactionTestCase):
         data = response.data
         assert old_email == data['email']
         assert 'm' == data['gender']
+
+
+class NameChangeViewTests(UserAPITestCase):
+    """ NameChangeView tests """
+
+    def setUp(self):
+        super().setUp()
+        self.url = reverse('name_change')
+
+    def test_request_succeeds(self):
+        """
+        Test that a valid name change request succeeds.
+        """
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
+        self.send_post(self.client, {'name': 'New Name'})
+
+    def test_unauthenticated(self):
+        """
+        Test that a name change request fails for an unauthenticated user.
+        """
+        self.send_post(self.client, {'name': 'New Name'}, expected_status=401)
+
+    def test_empty_request(self):
+        """
+        Test that an empty request fails.
+        """
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
+        self.send_post(self.client, {}, expected_status=400)
+
+    def test_blank_name(self):
+        """
+        Test that a blank name string fails.
+        """
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
+        self.send_post(self.client, {'name': ''}, expected_status=400)
+
+    def test_fails_validation(self):
+        """
+        Test that an invalid name will return an error.
+        """
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
+        self.send_post(
+            self.client,
+            {'name': '<html>invalid name</html>'},
+            expected_status=400
+        )
 
 
 @ddt.ddt
