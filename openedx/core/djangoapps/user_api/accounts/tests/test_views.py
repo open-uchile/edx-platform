@@ -426,7 +426,7 @@ class TestAccountsAPI(CacheIsolationTestCase, UserAPITestCase):
         """
         self.different_client.login(username=self.different_user.username, password=TEST_PASSWORD)
         self.create_mock_profile(self.user)
-        with self.assertNumQueries(26):
+        with self.assertNumQueries(27):
             response = self.send_get(self.different_client)
         self._verify_full_shareable_account_response(response, account_privacy=ALL_USERS_VISIBILITY)
 
@@ -441,7 +441,7 @@ class TestAccountsAPI(CacheIsolationTestCase, UserAPITestCase):
         """
         self.different_client.login(username=self.different_user.username, password=TEST_PASSWORD)
         self.create_mock_profile(self.user)
-        with self.assertNumQueries(26):
+        with self.assertNumQueries(27):
             response = self.send_get(self.different_client)
         self._verify_private_account_response(response)
 
@@ -588,12 +588,12 @@ class TestAccountsAPI(CacheIsolationTestCase, UserAPITestCase):
             assert data['accomplishments_shared'] is False
 
         self.client.login(username=self.user.username, password=TEST_PASSWORD)
-        verify_get_own_information(24)
+        verify_get_own_information(25)
 
         # Now make sure that the user can get the same information, even if not active
         self.user.is_active = False
         self.user.save()
-        verify_get_own_information(15)
+        verify_get_own_information(16)
 
     def test_get_account_empty_string(self):
         """
@@ -608,7 +608,7 @@ class TestAccountsAPI(CacheIsolationTestCase, UserAPITestCase):
         legacy_profile.save()
 
         self.client.login(username=self.user.username, password=TEST_PASSWORD)
-        with self.assertNumQueries(24):
+        with self.assertNumQueries(25):
             response = self.send_get(self.client)
         for empty_field in ("level_of_education", "gender", "country", "state", "bio",):
             assert response.data[empty_field] is None
@@ -1023,6 +1023,7 @@ class TestAccountAPITransactions(TransactionTestCase):
         assert 'm' == data['gender']
 
 
+@ddt.ddt
 class NameChangeViewTests(UserAPITestCase):
     """ NameChangeView tests """
 
@@ -1057,14 +1058,15 @@ class NameChangeViewTests(UserAPITestCase):
         self.client.login(username=self.user.username, password=TEST_PASSWORD)
         self.send_post(self.client, {'name': ''}, expected_status=400)
 
-    def test_fails_validation(self):
+    @ddt.data('<html>invalid name</html>', 'https://invalid.com')
+    def test_fails_validation(self, invalid_name):
         """
         Test that an invalid name will return an error.
         """
         self.client.login(username=self.user.username, password=TEST_PASSWORD)
         self.send_post(
             self.client,
-            {'name': '<html>invalid name</html>'},
+            {'name': invalid_name},
             expected_status=400
         )
 

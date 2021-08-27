@@ -43,7 +43,8 @@ class ReceiversTest(SharedModuleStoreTestCase):
         CourseEnrollmentFactory()
         assert CourseEnrollmentCelebration.objects.count() == 0
 
-    def test_approve_pending_name_change(self):
+
+    def test_listen_for_verified_name_approved(self):
         """
         Test that profile name is updated when a pending name change is approved
         """
@@ -56,7 +57,7 @@ class ReceiversTest(SharedModuleStoreTestCase):
 
         # Send a VERIFIED_NAME_APPROVED signal where the profile name matches the name
         # change request
-        VERIFIED_NAME_APPROVED.send(sender=None, user=user, profile_name=new_name)
+        VERIFIED_NAME_APPROVED.send(sender=None, user_id=user.id, profile_name=new_name)
 
         # Assert that the pending name change was deleted and the profile name was updated
         assert PendingNameChange.objects.count() == 0

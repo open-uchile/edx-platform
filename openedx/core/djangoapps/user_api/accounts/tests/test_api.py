@@ -33,7 +33,6 @@ from openedx.core.djangoapps.ace_common.tests.mixins import EmailTemplateTagMixi
 from openedx.core.djangoapps.user_api.accounts import PRIVATE_VISIBILITY
 from openedx.core.djangoapps.user_api.accounts.api import (
     get_account_settings,
-    request_name_change,
     update_account_settings
 )
 from openedx.core.djangoapps.user_api.accounts.tests.retirement_helpers import (  # pylint: disable=unused-import
@@ -532,29 +531,6 @@ class TestAccountApi(UserSettingsEventTestMixin, EmailTemplateTagMixin, CreateAc
         account_settings = get_account_settings(self.default_request)[0]
         assert account_settings['country'] is None
         assert account_settings['state'] is None
-
-    def test_pending_name_change(self):
-        """
-        Test to create and return a new pending name change.
-        """
-        new_name = 'New Name'
-        request_name_change(self.user, new_name)
-
-        account_settings = get_account_settings(self.default_request)[0]
-        assert account_settings['pending_name_change'] == new_name
-
-    def test_pending_name_change_same_name(self):
-        """
-        Test that attempting the request a name change with the same name as the user's
-        current profile name will not create a pending name change.
-        """
-        account_settings = get_account_settings(self.default_request)[0]
-        current_name = account_settings['name']
-
-        request_name_change(self.user, current_name)
-
-        account_settings = get_account_settings(self.default_request)[0]
-        assert account_settings['pending_name_change'] == None
 
 
 @patch('openedx.core.djangoapps.user_api.accounts.image_helpers._PROFILE_IMAGE_SIZES', [50, 10])

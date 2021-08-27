@@ -4,8 +4,6 @@ Signal receivers for the "student" application.
 
 # pylint: disable=unused-argument
 
-import logging
-
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
@@ -22,9 +20,7 @@ from common.djangoapps.student.models import (
     is_email_retired,
     is_username_retired
 )
-from common.djangoapps.student.views import confirm_name_change
-
-log = logging.getLogger(__name__)
+from common.djangoapps.student.models_api import confirm_name_change
 
 
 @receiver(pre_save, sender=get_user_model())
@@ -85,10 +81,11 @@ def create_course_enrollment_celebration(sender, instance, created, **kwargs):
 
 
 @receiver(VERIFIED_NAME_APPROVED)
-def listen_for_verified_name_approved(sender, user, profile_name, **kwargs):
+def listen_for_verified_name_approved(sender, user_id, profile_name, **kwargs):
     """
     If the user has a pending name change that corresponds to an approved verified name, confirm it.
     """
+    user = get_user_model().objects.get(id=user_id)
     try:
         pending_name_change = PendingNameChange.objects.get(user=user, new_name=profile_name)
         confirm_name_change(user, pending_name_change)

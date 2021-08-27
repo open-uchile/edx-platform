@@ -60,7 +60,6 @@ from common.djangoapps.student.models import (  # lint-amnesty, pylint: disable=
     AccountRecovery,
     CourseEnrollment,
     PendingEmailChange,  # unimport:skip
-    PendingNameChange,
     PendingSecondaryEmailChange,
     Registration,
     RegistrationCookieConfiguration,
@@ -681,56 +680,6 @@ def validate_secondary_email(user, new_email):
     message = get_secondary_email_validation_error(new_email)
     if message:
         raise ValueError(message)
-
-
-def do_name_change_request(user, new_name, rationale):
-    """
-    Create a name change request. This either updates the user's current PendingNameChange, or creates
-    a new one if it doesn't exist. Returns the PendingNameChange object and a boolean describing whether
-    or not a new one was created.
-    """
-    user_profile = UserProfile.objects.get(user=user)
-    if user_profile.name == new_name:
-        log_msg = (
-            'user_id={user_id} requested a name change, but the requested name is the same as'
-            'their current profile name. Not taking any action.'.format(user_id=user.id)
-        )
-        log.warning(log_msg)
-        return None, False
-
-    pending_name_change, created = PendingNameChange.objects.update_or_create(
-        user=user, new_name=new_name, rationale=rationale
-    )
-
-    return pending_name_change, created
-
-
-def confirm_name_change(user, pending_name_change):
-    """
-    Confirm a pending name change. This updates the user's profile name and deletes the
-    PendingNameChange object.
-    """
-    user_profile = UserProfile.objects.get(user=user)
-
-    # Store old name in profile metadata
-    meta = user_profile.get_meta()
-    if 'old_names' not in meta:
-        meta['old_names'] = []
-    meta['old_names'].append(
-        [user_profile.name, pending_name_change.rationale, datetime.datetime.now(UTC).isoformat()]
-    )
-    user_profile.set_meta(meta)
-    user_profile.save()
-
-    user_profile.name = pending_name_change.new_name
-    user_profile.save()
-    pending_name_change.delete()
-
-    log_msg = (
-        'Name change request for user_id={user_id} approved. Updated profile name and'
-        'deleted pending name change.'.format(user_id={user.id})
-    )
-    log.info(log_msg)
 
 
 def do_email_change_request(user, new_email, activation_key=None, secondary_email_change_request=False):

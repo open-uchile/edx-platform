@@ -21,7 +21,6 @@ from django.contrib.auth import authenticate, get_user_model, logout
 from django.contrib.sites.models import Site
 from django.core.cache import cache
 from django.db import transaction
-from django.forms import ValidationError as FormsValidationError
 from django.utils.translation import ugettext as _
 from edx_ace import ace
 from edx_ace.recipient import Recipient
@@ -56,6 +55,7 @@ from common.djangoapps.student.models import (  # lint-amnesty, pylint: disable=
     get_retired_username_by_username,
     is_username_retired
 )
+from common.djangoapps.student.models_api import do_name_change_request
 from openedx.core.djangoapps.ace_common.template_context import get_base_template_context
 from openedx.core.djangoapps.api_admin.models import ApiAccessRequest
 from openedx.core.djangoapps.course_groups.models import UnregisteredLearnerCohortAssignments
@@ -77,9 +77,10 @@ from ..models import (
     UserRetirementPartnerReportingStatus,
     UserRetirementStatus
 )
-from .api import get_account_settings, request_name_change, update_account_settings
+from .api import get_account_settings, update_account_settings
 from .permissions import CanDeactivateUser, CanReplaceUsername, CanRetireUser
 from .serializers import (
+    PendingNameChangeSerializer,
     UserRetirementPartnerReportSerializer,
     UserRetirementStatusSerializer,
     UserSearchEmailSerializer
@@ -437,19 +438,14 @@ class NameChangeView(APIView):
                 "name": "Jon Doe"
             }
         """
-        try:
-            requested_name = request.data['name']
-        except KeyError as error:
-            return Response(f'{error} field is required', status=status.HTTP_400_BAD_REQUEST)
+        user = request.user
+        new_name = request.data.get('name', None)
+        rationale = f'Name change requested through account API by {user.username}'
 
-        if requested_name == '':
-            return Response(
-                'An empty string was supplied. Please enter a valid name.',
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        serializer = PendingNameChangeSerializer(data={'new_name': new_name})
 
-        try:
-            pending_name_change = request_name_change(request.user, requested_name)
+        if serializer.is_valid():
+            pending_name_change = do_name_change_request(user, new_name, rationale)[0]
             if pending_name_change:
                 return Response(status=status.HTTP_201_CREATED)
             else:
@@ -457,11 +453,8 @@ class NameChangeView(APIView):
                     'The name given was identical to the current name.',
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        except FormsValidationError as err:
-            return Response(
-                f'Error thrown from validate_name: {err.message}',
-                status=status.HTTP_400_BAD_REQUEST
-            )
+
+        return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
 
 
 class AccountDeactivationView(APIView):

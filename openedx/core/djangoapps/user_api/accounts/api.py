@@ -5,7 +5,6 @@ Programmatic integration point for User API Accounts sub-application
 
 
 import datetime
-import logging
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -37,8 +36,6 @@ from openedx.core.djangoapps.user_authn.views.registration_form import validate_
 from openedx.core.lib.api.view_utils import add_serializer_errors
 from openedx.features.enterprise_support.utils import get_enterprise_readonly_account_fields
 from .serializers import AccountLegacyProfileSerializer, AccountUserSerializer, UserReadOnlySerializer, _visible_fields
-
-log = logging.getLogger(__name__)
 
 # Public access point for this function.
 visible_fields = _visible_fields
@@ -146,7 +143,6 @@ def update_account_settings(requesting_user, update, username=None):
     _validate_email_change(user, update, field_errors)
     _validate_secondary_email(user, update, field_errors)
     old_name = _validate_name_change(user_profile, update, field_errors)
-    _does_name_change_require_verification(user, old_name, update, field_errors)
     old_language_proficiencies = _get_old_language_proficiencies_if_updating(user_profile, update)
 
     if field_errors:
@@ -173,17 +169,6 @@ def update_account_settings(requesting_user, update, username=None):
         )
 
     _send_email_change_requests_if_needed(update, user)
-
-
-def request_name_change(user, new_name):
-    """
-    Request a name change. Creates or updates a PendingNameChange rather than directly
-    updating the user's profile.
-    """
-    validate_name(new_name)
-    rationale = f'Name change requested through account API by {user.username}'
-    pending_name_change = student_views.do_name_change_request(user, new_name, rationale)[0]
-    return pending_name_change
 
 
 def _validate_read_only_fields(user, data, field_errors):
@@ -257,6 +242,15 @@ def _validate_name_change(user_profile, data, field_errors):
         return None
 
     old_name = user_profile.name
+
+    if _does_name_change_require_verification(user_profile.user, old_name, data['name']):
+        err_msg = 'This name change requires ID verification.'
+        field_errors['name'] = {
+            'developer_message': err_msg,
+            'user_message': err_msg
+        }
+        return None
+
     try:
         validate_name(data['name'])
     except ValidationError as err:
@@ -269,25 +263,15 @@ def _validate_name_change(user_profile, data, field_errors):
     return old_name
 
 
-def _does_name_change_require_verification(user, old_name, data, field_errors):
+def _does_name_change_require_verification(user, old_name, new_name):
     """
     If name change requires verification, do not update it through this API.
     """
-    if 'name' not in data:
-        return
-    
-    if (
+    return (
         is_verified_name_enabled()
-        and old_name != data['name']
+        and old_name != new_name
         and len(get_certificates_for_user(user.username)) > 0
-    ):
-        err_msg = 'This name change requires ID verification.'
-        field_errors['name'] = {
-            'developer_message': err_msg,
-            'user_message': err_msg
-        }
-        del data['name']
-        old_name = None
+    )
 
 
 def _get_old_language_proficiencies_if_updating(user_profile, data):
