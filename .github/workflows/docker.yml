@@ -45,7 +45,6 @@ jobs:
         run: |
           docker push ghcr.io/open-uchile/edx-platform:${GITHUB_SHA}
           docker push ghcr.io/open-uchile/edx-platform:koa
-          docker push ghcr.io/open-uchile/edx-platform:testing-koa
 
       - name: Move cache
         run: |
