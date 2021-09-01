@@ -27,8 +27,8 @@ jobs:
             --file .github/build/Dockerfile \
             --target base \
             --build-arg EDX_PLATFORM_VERSION=${GITHUB_SHA} \
-            --tag ghcr.io/openuchile/edx-platform:${GITHUB_SHA} \
-            --tag ghcr.io/openuchile/edx-platform:koa \
+            --tag ghcr.io/open-uchile/edx-platform:${GITHUB_SHA} \
+            --tag ghcr.io/open-uchile/edx-platform:koa \
             --cache-from "type=local,src=/tmp/.buildx-cache" \
             --cache-to "type=local,dest=/tmp/.buildx-cache-new" \
             --output "type=docker,push=false"
@@ -43,9 +43,9 @@ jobs:
       - name: Push to koa
         if: github.ref == 'refs/heads/eol/koa.master'
         run: |
-          docker push ghcr.io/openuchile/edx-platform:${GITHUB_SHA}
-          docker push ghcr.io/openuchile/edx-platform:koa
-          docker push ghcr.io/openuchile/edx-platform:testing-koa
+          docker push ghcr.io/open-uchile/edx-platform:${GITHUB_SHA}
+          docker push ghcr.io/open-uchile/edx-platform:koa
+          docker push ghcr.io/open-uchile/edx-platform:testing-koa
 
       - name: Move cache
         run: |
