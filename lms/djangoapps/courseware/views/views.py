@@ -954,7 +954,9 @@ def course_about(request, course_id):
 
         # Embed the course reviews tool
         reviews_fragment_view = CourseReviewsModuleFragmentView().render_to_fragment(request, course=course)
-
+        ##### Open Uchile ######
+        total_enrolled = CourseEnrollment.objects.filter(course_id=course_key, is_active=1).count()
+        ##### End Open Uchile ######
         context = {
             'course': course,
             'course_details': course_details,
@@ -982,6 +984,7 @@ def course_about(request, course_id):
             'reviews_fragment_view': reviews_fragment_view,
             'sidebar_html_enabled': sidebar_html_enabled,
             'allow_anonymous': allow_anonymous,
+            'total_enrolled': total_enrolled
         }
 
         return render_to_response('courseware/course_about.html', context)
