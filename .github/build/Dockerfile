@@ -99,8 +99,8 @@ ENV REVISION_CFG /openedx/config/revision.yml
 # and requires a complex settings file. Instead, we decompose the commands
 # and run each one individually to collect the production static assets to
 # /openedx/staticfiles.
-RUN paver update_assets lms --env=prod \
-  && paver update_assets cms --env=prod
+RUN paver update_assets lms --settings=prod \
+  && paver update_assets cms --settings=prod
 # openedx-assets xmodule \
 #     && openedx-assets npm \
 #     && openedx-assets webpack --env=prod \
