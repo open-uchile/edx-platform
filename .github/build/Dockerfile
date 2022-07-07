@@ -104,7 +104,8 @@ ENV REVISION_CFG /openedx/config/revision.yml
 RUN openedx-assets xmodule \
     && openedx-assets npm \
     && openedx-assets webpack --env=prod \
-    && openedx-assets common
+    && openedx-assets common \
+    && paver compile_sass --debug
 
 # service variant is "lms" or "cms"
 ENV SERVICE_VARIANT lms
