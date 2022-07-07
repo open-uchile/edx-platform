@@ -104,15 +104,14 @@ ENV REVISION_CFG /openedx/config/revision.yml
 RUN openedx-assets xmodule \
     && openedx-assets npm \
     && openedx-assets webpack --env=prod \
-    && openedx-assets common \
-    && paver compile_sass --debug
+    && openedx-assets common
 
 # service variant is "lms" or "cms"
 ENV SERVICE_VARIANT lms
 ENV SETTINGS prod.production
 
-RUN paver update_assets lms --settings=prod.production \
-    && paver update_assets cms --settings=prod.production
+# RUN paver update_assets lms --settings=prod.production \
+#     && paver update_assets cms --settings=prod.production
 
 # Entrypoint will fix permissions of all files and run commands as openedx
 ENTRYPOINT ["docker-entrypoint.sh"]
