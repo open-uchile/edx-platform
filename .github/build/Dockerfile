@@ -92,6 +92,8 @@ ENV LMS_CFG /openedx/config/lms.yml
 ENV STUDIO_CFG /openedx/config/cms.yml
 ENV REVISION_CFG /openedx/config/revision.yml
 
+
+
 # Collect production assets. By default, only assets from the default theme
 # will be processed. This makes the docker image lighter and faster to build.
 # Only the custom themes added to /openedx/themes will be compiled.
@@ -107,6 +109,9 @@ RUN openedx-assets xmodule \
 # service variant is "lms" or "cms"
 ENV SERVICE_VARIANT lms
 ENV SETTINGS prod.production
+
+# RUN paver update_assets lms --settings=prod.production \
+#     && paver update_assets cms --settings=prod.production
 
 # Entrypoint will fix permissions of all files and run commands as openedx
 ENTRYPOINT ["docker-entrypoint.sh"]
