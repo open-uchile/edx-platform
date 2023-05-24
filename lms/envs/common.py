@@ -2447,7 +2447,7 @@ YOUTUBE_API_KEY = 'PUT_YOUR_API_KEY_HERE'
 # RemovedInDjango19Warnings in the test logs.
 INSTALLED_APPS = [
     # Standard ones that are always installed...
-    'course_info',
+    'lms.djangoapps.course_info',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.humanize',
