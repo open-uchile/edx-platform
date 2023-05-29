@@ -10,6 +10,7 @@ from functools import reduce
 
 import pytz
 import six
+import json
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponseServerError
@@ -694,6 +695,17 @@ def _section_send_email(course, access):
             'list_email_content', kwargs={'course_id': six.text_type(course_key)}
         ),
     }
+    ## EOL
+    try:
+        from welcome_mail.models import WelcomeMail
+        section_data['welcome_data'] = '{}'
+        section_data['welcome-mail-save'] = reverse('welcome-mail:save', kwargs={'course_id': str(course_key)})
+        if WelcomeMail.objects.filter(course_key=course_key).exists():
+            mail = WelcomeMail.objects.get(course_key=course_key)
+            section_data['welcome_data'] = json.dumps({'subject':mail.subject, 'message':mail.html_message, 'is_active':mail.is_active})
+    except ImportError:
+        log.error('WelcomeMail - App doesnt installed')
+    ## END EOL
     return section_data
 
 
